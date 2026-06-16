@@ -88,6 +88,11 @@ const id = {
     defaultTemplate: "Template default",
     logoColor: "Warna logo",
     logoAuto: "PK (otomatis)",
+    logoImage: "Logo perusahaan",
+    logoUploadBtn: "Unggah logo",
+    logoUploading: "Mengunggah…",
+    logoRemove: "Hapus logo",
+    logoHint: "PNG, JPG, SVG, WEBP atau GIF, maks 4MB.",
     addBtn: "Tambah perusahaan",
     deleteTitle: "Hapus perusahaan?",
     deleteDesc: (name: string) =>
@@ -330,6 +335,11 @@ const en: Dict = {
     defaultTemplate: "Default template",
     logoColor: "Logo color",
     logoAuto: "PK (auto)",
+    logoImage: "Company logo",
+    logoUploadBtn: "Upload logo",
+    logoUploading: "Uploading…",
+    logoRemove: "Remove logo",
+    logoHint: "PNG, JPG, SVG, WEBP or GIF, max 4MB.",
     addBtn: "Add company",
     deleteTitle: "Delete company?",
     deleteDesc: (name: string) =>

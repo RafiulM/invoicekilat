@@ -13,8 +13,9 @@ export interface Company {
   companyAddress: string;
   companyContact: string;
   contactPerson: string;
-  logoText: string; // dummy logo = initials/emoji
+  logoText: string; // fallback logo = initials/emoji
   logoColor: string;
+  logoUrl?: string | null; // uploaded logo image (overrides initials when set)
   defaultTemplateId: TemplateId;
   createdAt: string;
 }

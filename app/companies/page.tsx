@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Building02Icon,
@@ -8,8 +8,11 @@ import {
   Delete02Icon,
   PlusSignIcon,
   Tick02Icon,
+  ImageUploadIcon,
+  Loading03Icon,
 } from "@hugeicons/core-free-icons";
 import { useStore } from "@/lib/store";
+import { useUpload } from "@/lib/hooks";
 import { useT } from "@/lib/i18n";
 import { Company, TemplateId } from "@/lib/types";
 import { TEMPLATES } from "@/lib/dummy-data";
@@ -38,6 +41,7 @@ const empty = {
   contactPerson: "",
   logoText: "",
   logoColor: LOGO_COLORS[0],
+  logoUrl: "",
   defaultTemplateId: "modern" as TemplateId,
 };
 
@@ -58,9 +62,27 @@ export default function CompaniesPage() {
   const [form, setForm] = useState(empty);
   const [confirmDel, setConfirmDel] = useState<Company | null>(null);
 
+  const upload = useUpload();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [logoErr, setLogoErr] = useState<string | null>(null);
+
+  async function onLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // let the same file be picked again after a remove
+    if (!file) return;
+    setLogoErr(null);
+    try {
+      const { url } = await upload.mutateAsync({ file, kind: "logo" });
+      setForm((f) => ({ ...f, logoUrl: url }));
+    } catch (err) {
+      setLogoErr(err instanceof Error ? err.message : t.editor.saveError);
+    }
+  }
+
   function startAdd() {
     setEditing(null);
     setForm(empty);
+    setLogoErr(null);
     setOpen(true);
   }
   function startEdit(c: Company) {
@@ -72,8 +94,10 @@ export default function CompaniesPage() {
       contactPerson: c.contactPerson,
       logoText: c.logoText,
       logoColor: c.logoColor,
+      logoUrl: c.logoUrl ?? "",
       defaultTemplateId: c.defaultTemplateId,
     });
+    setLogoErr(null);
     setOpen(true);
   }
   function save() {
@@ -86,7 +110,7 @@ export default function CompaniesPage() {
         .slice(0, 2)
         .join("")
         .toUpperCase();
-    const payload = { ...form, logoText };
+    const payload = { ...form, logoText, logoUrl: form.logoUrl || null };
     if (editing) updateCompany(editing.id, payload);
     else addCompany(payload);
     setOpen(false);
@@ -107,12 +131,21 @@ export default function CompaniesPage() {
           return (
             <Card key={c.id} className="p-5">
               <div className="flex items-start gap-4">
-                <span
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
-                  style={{ background: c.logoColor }}
-                >
-                  {c.logoText}
-                </span>
+                {c.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={c.logoUrl}
+                    alt={`${c.companyName} logo`}
+                    className="h-12 w-12 shrink-0 rounded-xl object-contain bg-white ring-1 ring-[var(--border)]"
+                  />
+                ) : (
+                  <span
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
+                    style={{ background: c.logoColor }}
+                  >
+                    {c.logoText}
+                  </span>
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className="truncate font-semibold">{c.companyName}</h3>
@@ -280,6 +313,78 @@ export default function CompaniesPage() {
                   )}
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div>
+            <Label>{t.companies.logoImage}</Label>
+            <div className="flex items-center gap-3">
+              {form.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={form.logoUrl}
+                  alt="Logo preview"
+                  className="h-14 w-14 shrink-0 rounded-xl object-contain bg-white ring-1 ring-[var(--border)]"
+                />
+              ) : (
+                <span
+                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-[var(--muted-foreground)] ring-1 ring-dashed ring-[var(--border)]"
+                >
+                  <HugeiconsIcon icon={ImageUploadIcon} size={20} />
+                </span>
+              )}
+
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+                className="hidden"
+                onChange={onLogoFile}
+              />
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={upload.isPending}
+                  >
+                    {upload.isPending ? (
+                      <HugeiconsIcon
+                        icon={Loading03Icon}
+                        size={15}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <HugeiconsIcon icon={ImageUploadIcon} size={15} />
+                    )}
+                    {upload.isPending
+                      ? t.companies.logoUploading
+                      : t.companies.logoUploadBtn}
+                  </Button>
+                  {form.logoUrl && !upload.isPending && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="text-red-600 hover:bg-red-50"
+                      onClick={() => setForm({ ...form, logoUrl: "" })}
+                    >
+                      {t.companies.logoRemove}
+                    </Button>
+                  )}
+                </div>
+                {logoErr ? (
+                  <p className="text-xs text-red-600" role="alert">
+                    {logoErr}
+                  </p>
+                ) : (
+                  <p className="text-xs text-[var(--muted-foreground)]">
+                    {t.companies.logoHint}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
