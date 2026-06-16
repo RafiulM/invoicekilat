@@ -31,6 +31,14 @@ ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 
 RUN npm run build
 
+# Bundle the migrate + seed scripts into self-contained ESM so the slim runner
+# (which has only the pruned standalone node_modules) can execute them.
+# Native/optional pg deps are kept external — pg loads them lazily in try/catch.
+RUN node_modules/.bin/esbuild lib/db/migrate.ts lib/db/seed.ts \
+      --bundle --platform=node --format=cjs --target=node22 \
+      --outdir=dist-scripts --out-extension:.js=.cjs \
+      --external:pg-native --external:cloudflare:sockets
+
 # ---- runner: minimal runtime image ----
 FROM node:22-alpine AS runner
 WORKDIR /app
@@ -47,9 +55,18 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Migration/seed bundles, the SQL migrations they apply, and the entrypoint
+COPY --from=builder --chown=nextjs:nodejs /app/dist-scripts ./dist-scripts
+COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
+COPY --chown=nextjs:nodejs docker/entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
+
 USER nextjs
 EXPOSE 3000
 
 # Server-only env (DATABASE_URL, BETTER_AUTH_SECRET, S3_*, GOOGLE_*, ...)
 # is read at RUNTIME — inject with `docker run --env-file` or `-e`.
+# Entrypoint runs migrations + seed, then starts the server (CMD).
+# Skip either with RUN_MIGRATIONS=false / RUN_SEED=false.
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["node", "server.js"]
