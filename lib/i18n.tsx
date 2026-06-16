@@ -1,0 +1,547 @@
+"use client";
+
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+
+export type Lang = "id" | "en";
+
+const LS_LANG = "invoicegen.lang";
+
+/* ---------------------------------------------------------------------------
+   Translation dictionary. `id` (Indonesian) is the source of truth; `en` is
+   typed against it (`Dict = typeof id`) so the two stay structurally in sync —
+   a missing or misspelled key fails the typecheck. Values needing runtime
+   interpolation are functions.
+--------------------------------------------------------------------------- */
+
+const id = {
+  common: {
+    cancel: "Batal",
+    save: "Simpan",
+    saveChanges: "Simpan perubahan",
+    delete: "Hapus",
+    edit: "Edit",
+    close: "Tutup",
+    choose: "Pilih",
+    or: "atau",
+  },
+  nav: {
+    createInvoice: "Buat Invoice",
+    history: "Riwayat Invoice",
+    companies: "Perusahaan",
+    contacts: "Kontak Klien",
+    templates: "Template",
+  },
+  account: {
+    signIn: "Masuk",
+    signOut: "Keluar",
+    navigation: "Navigasi",
+    switchCompany: "Ganti perusahaan",
+    addCompany: "Tambah perusahaan",
+    activeCompany: "Perusahaan aktif",
+    menu: "Menu",
+  },
+  auth: {
+    signInTitle: "Masuk ke InvoiceKilat",
+    signInSubtitle: "Kelola perusahaan, kontak, dan invoice Anda.",
+    signUpTitle: "Buat akun",
+    signUpSubtitle: "Mulai buat invoice profesional dalam menit.",
+    noSignIn: "Tidak ada metode masuk yang aktif. Hubungi administrator.",
+    noSignUp: "Tidak ada metode pendaftaran yang aktif. Hubungi administrator.",
+    email: "Email",
+    password: "Kata sandi",
+    name: "Nama",
+    fullName: "Nama lengkap",
+    atLeast8: "Minimal 8 karakter",
+    pwShort: "Kata sandi minimal 8 karakter.",
+    signInFail: "Gagal masuk. Periksa email & kata sandi.",
+    signUpFail: "Gagal mendaftar. Coba email lain.",
+    signInBtn: "Masuk",
+    signUpBtn: "Daftar",
+    haveAccount: "Sudah punya akun?",
+    noAccount: "Belum punya akun?",
+    emailPh: "anda@email.com",
+    google: "Lanjutkan dengan Google",
+  },
+  companies: {
+    title: "Perusahaan",
+    subtitle:
+      "Kelola profil bisnis penerbit invoice (issuer). Setiap profil punya logo, kontak, dan template default.",
+    add: "Tambah Perusahaan",
+    addNew: "Tambah perusahaan baru",
+    activeBadge: "Aktif",
+    setActive: "Jadikan aktif",
+    invoiceCount: (n: number) => `${n} invoice`,
+    dialogEditTitle: "Edit Perusahaan",
+    dialogAddTitle: "Tambah Perusahaan",
+    dialogDesc:
+      "Data ini akan otomatis mengisi bagian penerbit pada invoice.",
+    name: "Nama perusahaan",
+    address: "Alamat",
+    contact: "Kontak (email / telp)",
+    internalPerson: "Contact person internal",
+    logoInitials: "Inisial logo",
+    defaultTemplate: "Template default",
+    logoColor: "Warna logo",
+    logoAuto: "PK (otomatis)",
+    addBtn: "Tambah perusahaan",
+    deleteTitle: "Hapus perusahaan?",
+    deleteDesc: (name: string) =>
+      `"${name}" beserta seluruh invoice terkait akan dihapus. Tindakan ini tidak bisa dibatalkan.`,
+    namePh: "Studio Pixel Kreatif",
+    addressPh: "Jl. Merdeka No. 12, Bandung",
+    contactPh: "halo@studio.id",
+    personPh: "Andi Wijaya",
+  },
+  contacts: {
+    title: "Kontak Klien",
+    subtitle:
+      "Simpan penerima yang sering ditagih agar pengisian invoice lebih cepat.",
+    add: "Tambah Kontak",
+    search: "Cari nama klien, kontak, atau alamat…",
+    noMatch: "Tidak ada kontak yang cocok.",
+    empty: "Belum ada kontak klien.",
+    addFirst: "Tambah kontak pertama",
+    dialogEditTitle: "Edit Kontak",
+    dialogAddTitle: "Tambah Kontak",
+    dialogDesc: "Kontak penerima terpisah dari profil perusahaan Anda.",
+    companyName: "Nama perusahaan / klien",
+    contactPerson: "Contact person",
+    contactInfo: "Kontak (email / telp)",
+    billingAddress: "Alamat tagihan",
+    addBtn: "Tambah kontak",
+    deleteTitle: "Hapus kontak?",
+    deleteDesc: (name: string) =>
+      `"${name}" akan dihapus dari daftar kontak.`,
+    companyPh: "PT Maju Bersama",
+    personPh: "Rina Kusuma",
+    contactPh: "rina@majubersama.co.id",
+    addressPh: "Jl. Sudirman Kav. 21, Jakarta Selatan",
+  },
+  invoices: {
+    title: "Riwayat Invoice",
+    subtitle:
+      "Seluruh invoice tersimpan otomatis. Lihat ulang atau unduh kembali PDF kapan saja.",
+    create: "Buat Invoice",
+    search: "Cari nomor atau nama klien…",
+    allCompanies: "Semua perusahaan",
+    allStatuses: "Semua status",
+    colInvoice: "Invoice",
+    colClient: "Klien",
+    colTotal: "Total",
+    colStatus: "Status",
+    colActions: "Aksi",
+    view: "Lihat",
+    noMatch: "Tidak ada invoice yang cocok.",
+    deleteTitle: "Hapus invoice?",
+    deleteDesc: (number: string) =>
+      `${number} akan dihapus permanen dari riwayat.`,
+    download: "Unduh PDF",
+    preparing: "Menyiapkan…",
+  },
+  templates: {
+    title: "Galeri Template",
+    subtitle:
+      "Empat gaya desain invoice. Setiap perusahaan bisa punya template default — terpakai otomatis saat membuat invoice.",
+    create: "Buat Invoice",
+    defaultBadge: "Default",
+    use: "Gunakan",
+    names: {
+      klasik: "Klasik",
+      modern: "Modern",
+      minimalis: "Minimalis",
+      profesional: "Profesional",
+    } as Record<string, string>,
+    descs: {
+      klasik: "Tata letak formal dengan garis tegas dan tipografi serif.",
+      modern: "Header berwarna penuh, bersih, dan berani.",
+      minimalis: "Banyak ruang kosong, ringan, dan fokus pada isi.",
+      profesional: "Korporat, terstruktur, cocok untuk perusahaan besar.",
+    } as Record<string, string>,
+    fallbackCompany: "Perusahaan Anda",
+    fallbackAddress: "Alamat perusahaan Anda",
+    fallbackPerson: "Nama Anda",
+  },
+  status: {
+    draft: "Draf",
+    sent: "Terkirim",
+    paid: "Lunas",
+  },
+  editor: {
+    title: "Editor Invoice",
+    template: "Template",
+    currency: "Mata Uang",
+    accent: "Aksen",
+    view: "Tampilan",
+    edit: "Edit",
+    preview: "Pratinjau",
+    minimal: "Minimal",
+    classic: "Klasik",
+    bold: "Tebal",
+    addLineItem: "Tambah baris",
+    print: "Cetak / PDF",
+    save: "Simpan ke Riwayat",
+    saving: "Menyimpan…",
+    saved: "Tersimpan!",
+    saveError: "Gagal menyimpan invoice.",
+    signInToSave: "Masuk untuk menyimpan",
+    needCompany: "Buat perusahaan dulu untuk menyimpan",
+    viewHistory: "Lihat di riwayat",
+    from: "Dari",
+    choose: "Pilih",
+    savedSenders: "Pengirim tersimpan",
+    savedClients: "Klien tersimpan",
+    yourLogo: "logo anda",
+    billTo: "Ditagih ke",
+    invoiceWord: "Invoice",
+    invoiceNo: "No. Invoice",
+    issued: "Terbit",
+    due: "Jatuh tempo",
+    description: "Deskripsi",
+    qty: "Qty",
+    rate: "Harga",
+    amount: "Jumlah",
+    subtotal: "Subtotal",
+    discount: "Diskon",
+    tax: "Pajak",
+    totalDue: "Total Tagihan",
+    paymentTerms: "Syarat Pembayaran",
+    bankDetails: "Detail Bank",
+    notes: "Catatan",
+    bank: "Bank",
+    account: "Rekening",
+    routing: "Routing",
+    swift: "SWIFT",
+    transferNote: "Cantumkan nomor invoice pada transfer Anda.",
+    hint: "Klik kolom mana pun pada invoice untuk mengeditnya. Gunakan “Pilih” untuk memuat pengirim atau klien tersimpan.",
+    ph: {
+      name: "Nama / studio Anda",
+      street: "Alamat jalan",
+      city: "Kota, Provinsi, Kode Pos",
+      email: "email@studio.com",
+      phone: "Telepon",
+      clientName: "Nama klien",
+      clientEmail: "klien@email.com",
+      item: "Item atau jasa",
+      terms: "Net 14",
+      bankName: "Nama bank",
+      notes: "Terima kasih atas kerja sama Anda!",
+    },
+  },
+  doc: {
+    description: "Deskripsi",
+    qty: "Qty",
+    price: "Harga",
+    amount: "Jumlah",
+    noItems: "Belum ada item.",
+    billedTo: "Ditagihkan kepada",
+    attn: "Kepada Yth.",
+    forLabel: "Untuk",
+    date: "Tanggal",
+    issueDate: "Tanggal terbit",
+    due: "Jatuh tempo",
+    contactPerson: "Contact person",
+    issuedBy: "Diterbitkan oleh",
+    regards: "Hormat kami,",
+    notes: "Catatan",
+    subtotal: "Subtotal",
+    tax: "PPN 11%",
+    total: "Total",
+    invoice: "Invoice",
+    no: "No.",
+  },
+  lang: {
+    label: "Bahasa",
+  },
+};
+
+export type Dict = typeof id;
+
+const en: Dict = {
+  common: {
+    cancel: "Cancel",
+    save: "Save",
+    saveChanges: "Save changes",
+    delete: "Delete",
+    edit: "Edit",
+    close: "Close",
+    choose: "Choose",
+    or: "or",
+  },
+  nav: {
+    createInvoice: "Create Invoice",
+    history: "Invoice History",
+    companies: "Companies",
+    contacts: "Client Contacts",
+    templates: "Templates",
+  },
+  account: {
+    signIn: "Sign in",
+    signOut: "Sign out",
+    navigation: "Navigation",
+    switchCompany: "Switch company",
+    addCompany: "Add company",
+    activeCompany: "Active company",
+    menu: "Menu",
+  },
+  auth: {
+    signInTitle: "Sign in to InvoiceKilat",
+    signInSubtitle: "Manage your companies, contacts, and invoices.",
+    signUpTitle: "Create account",
+    signUpSubtitle: "Start creating professional invoices in minutes.",
+    noSignIn: "No sign-in method is enabled. Contact your administrator.",
+    noSignUp: "No sign-up method is enabled. Contact your administrator.",
+    email: "Email",
+    password: "Password",
+    name: "Name",
+    fullName: "Full name",
+    atLeast8: "At least 8 characters",
+    pwShort: "Password must be at least 8 characters.",
+    signInFail: "Failed to sign in. Check your email & password.",
+    signUpFail: "Failed to sign up. Try another email.",
+    signInBtn: "Sign in",
+    signUpBtn: "Sign up",
+    haveAccount: "Already have an account?",
+    noAccount: "Don't have an account?",
+    emailPh: "you@email.com",
+    google: "Continue with Google",
+  },
+  companies: {
+    title: "Companies",
+    subtitle:
+      "Manage the issuer business profiles. Each profile has its own logo, contact, and default template.",
+    add: "Add Company",
+    addNew: "Add a new company",
+    activeBadge: "Active",
+    setActive: "Set active",
+    invoiceCount: (n: number) => `${n} ${n === 1 ? "invoice" : "invoices"}`,
+    dialogEditTitle: "Edit Company",
+    dialogAddTitle: "Add Company",
+    dialogDesc: "This data auto-fills the issuer section on invoices.",
+    name: "Company name",
+    address: "Address",
+    contact: "Contact (email / phone)",
+    internalPerson: "Internal contact person",
+    logoInitials: "Logo initials",
+    defaultTemplate: "Default template",
+    logoColor: "Logo color",
+    logoAuto: "PK (auto)",
+    addBtn: "Add company",
+    deleteTitle: "Delete company?",
+    deleteDesc: (name: string) =>
+      `"${name}" and all related invoices will be deleted. This cannot be undone.`,
+    namePh: "Studio Pixel Kreatif",
+    addressPh: "Jl. Merdeka No. 12, Bandung",
+    contactPh: "halo@studio.id",
+    personPh: "Andi Wijaya",
+  },
+  contacts: {
+    title: "Client Contacts",
+    subtitle: "Save frequent recipients to fill invoices faster.",
+    add: "Add Contact",
+    search: "Search client name, contact, or address…",
+    noMatch: "No matching contacts.",
+    empty: "No client contacts yet.",
+    addFirst: "Add your first contact",
+    dialogEditTitle: "Edit Contact",
+    dialogAddTitle: "Add Contact",
+    dialogDesc: "Recipient contacts are separate from your company profile.",
+    companyName: "Company / client name",
+    contactPerson: "Contact person",
+    contactInfo: "Contact (email / phone)",
+    billingAddress: "Billing address",
+    addBtn: "Add contact",
+    deleteTitle: "Delete contact?",
+    deleteDesc: (name: string) =>
+      `"${name}" will be removed from your contacts.`,
+    companyPh: "PT Maju Bersama",
+    personPh: "Rina Kusuma",
+    contactPh: "rina@majubersama.co.id",
+    addressPh: "Jl. Sudirman Kav. 21, Jakarta Selatan",
+  },
+  invoices: {
+    title: "Invoice History",
+    subtitle:
+      "All invoices are saved automatically. Review or re-download the PDF anytime.",
+    create: "Create Invoice",
+    search: "Search number or client name…",
+    allCompanies: "All companies",
+    allStatuses: "All statuses",
+    colInvoice: "Invoice",
+    colClient: "Client",
+    colTotal: "Total",
+    colStatus: "Status",
+    colActions: "Actions",
+    view: "View",
+    noMatch: "No matching invoices.",
+    deleteTitle: "Delete invoice?",
+    deleteDesc: (number: string) =>
+      `${number} will be permanently deleted from history.`,
+    download: "Download PDF",
+    preparing: "Preparing…",
+  },
+  templates: {
+    title: "Template Gallery",
+    subtitle:
+      "Four invoice design styles. Each company can have a default template — applied automatically when creating an invoice.",
+    create: "Create Invoice",
+    defaultBadge: "Default",
+    use: "Use",
+    names: {
+      klasik: "Classic",
+      modern: "Modern",
+      minimalis: "Minimalist",
+      profesional: "Professional",
+    },
+    descs: {
+      klasik: "Formal layout with strong rules and serif typography.",
+      modern: "Full-color header, clean and bold.",
+      minimalis: "Lots of whitespace, light, content-focused.",
+      profesional: "Corporate, structured, great for larger companies.",
+    },
+    fallbackCompany: "Your Company",
+    fallbackAddress: "Your company address",
+    fallbackPerson: "Your Name",
+  },
+  status: {
+    draft: "Draft",
+    sent: "Sent",
+    paid: "Paid",
+  },
+  editor: {
+    title: "Invoice editor",
+    template: "Template",
+    currency: "Currency",
+    accent: "Accent",
+    view: "View",
+    edit: "Edit",
+    preview: "Preview",
+    minimal: "Minimal",
+    classic: "Classic",
+    bold: "Bold",
+    addLineItem: "Add line item",
+    print: "Print / PDF",
+    save: "Save to History",
+    saving: "Saving…",
+    saved: "Saved!",
+    saveError: "Failed to save invoice.",
+    signInToSave: "Sign in to save",
+    needCompany: "Create a company first to save",
+    viewHistory: "View in history",
+    from: "From",
+    choose: "Choose",
+    savedSenders: "Saved senders",
+    savedClients: "Saved clients",
+    yourLogo: "your logo",
+    billTo: "Bill To",
+    invoiceWord: "Invoice",
+    invoiceNo: "Invoice No.",
+    issued: "Issued",
+    due: "Due",
+    description: "Description",
+    qty: "Qty",
+    rate: "Rate",
+    amount: "Amount",
+    subtotal: "Subtotal",
+    discount: "Discount",
+    tax: "Tax",
+    totalDue: "Total Due",
+    paymentTerms: "Payment Terms",
+    bankDetails: "Bank Details",
+    notes: "Notes",
+    bank: "Bank",
+    account: "Account",
+    routing: "Routing",
+    swift: "SWIFT",
+    transferNote: "Please reference the invoice number on your transfer.",
+    hint: "Click any field on the invoice to edit it. Use “Choose” to load a saved sender or client.",
+    ph: {
+      name: "Your name / studio",
+      street: "Street address",
+      city: "City, State ZIP",
+      email: "email@studio.com",
+      phone: "Phone",
+      clientName: "Client name",
+      clientEmail: "client@email.com",
+      item: "Item or service",
+      terms: "Net 14",
+      bankName: "Bank name",
+      notes: "Thank you for your business!",
+    },
+  },
+  doc: {
+    description: "Description",
+    qty: "Qty",
+    price: "Price",
+    amount: "Amount",
+    noItems: "No items yet.",
+    billedTo: "Billed to",
+    attn: "Attn.",
+    forLabel: "For",
+    date: "Date",
+    issueDate: "Issue date",
+    due: "Due date",
+    contactPerson: "Contact person",
+    issuedBy: "Issued by",
+    regards: "Best regards,",
+    notes: "Notes",
+    subtotal: "Subtotal",
+    tax: "VAT 11%",
+    total: "Total",
+    invoice: "Invoice",
+    no: "No.",
+  },
+  lang: {
+    label: "Language",
+  },
+};
+
+const DICTS: Record<Lang, Dict> = { id, en };
+
+interface LangCtx {
+  lang: Lang;
+  setLang: (l: Lang) => void;
+}
+
+const LanguageContext = createContext<LangCtx | null>(null);
+
+export function LanguageProvider({ children }: { children: React.ReactNode }) {
+  const [lang, setLangState] = useState<Lang>("id");
+
+  // Hydrate persisted choice on mount (avoids SSR/client mismatch).
+  useEffect(() => {
+    const saved = localStorage.getItem(LS_LANG);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (saved === "en" || saved === "id") setLangState(saved);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
+  const setLang = (l: Lang) => {
+    setLangState(l);
+    localStorage.setItem(LS_LANG, l);
+  };
+
+  return (
+    <LanguageContext.Provider value={{ lang, setLang }}>
+      {children}
+    </LanguageContext.Provider>
+  );
+}
+
+export function useLang() {
+  const ctx = useContext(LanguageContext);
+  if (!ctx) throw new Error("useLang must be used within LanguageProvider");
+  return ctx;
+}
+
+/** Returns the dictionary for the active language. */
+export function useT(): Dict {
+  return DICTS[useLang().lang];
+}

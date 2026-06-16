@@ -1,26 +1,231 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Warm, minimal palette shared with the invoice editor (Invoice.dc) */
+  --background: #f4f4f2;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --muted: #f1f0ec;
+  --muted-foreground: #6b6b63;
+  --label: #9a9a93;
+  --border: #ececec;
+  --input: #e4e4de;
+  --primary: #1a1a1a;
+  --primary-foreground: #ffffff;
+  --accent: #ecebe5;
+  --ring: #d6d5cd;
+  --radius: 0.75rem;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-label: var(--label);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-schibsted), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-schibsted), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Mono, tracked, uppercase eyebrow label — the design's signature small label */
+.eyebrow {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--label);
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d6d5cd;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------------- Invoice editor (main page) ---------------- */
+.invoice-app input::placeholder,
+.invoice-app textarea::placeholder {
+  color: #c4c4bd;
+  opacity: 0.7;
+}
+
+/* Inline editable fields — always show a faint slot so it's obvious they're
+   editable; deepen on hover/focus. Reset to clean on print. */
+.invoice-app .iv-f,
+.invoice-app .iv-hf {
+  transition: background 0.12s, box-shadow 0.12s;
+  cursor: text;
+}
+.invoice-app .iv-f {
+  background: var(--field-hover);
+  box-shadow: inset 0 0 0 1px var(--line-soft);
+}
+.invoice-app .iv-hf {
+  background: var(--head-field-hover);
+  box-shadow: inset 0 0 0 1px var(--head-field-focus);
+}
+.invoice-app .iv-f:hover,
+.invoice-app .iv-f:focus {
+  background: var(--field-hover);
+  box-shadow: inset 0 0 0 1px var(--field-focus);
+}
+.invoice-app .iv-hf:hover,
+.invoice-app .iv-hf:focus {
+  background: var(--head-field-hover);
+  box-shadow: inset 0 0 0 1px var(--head-field-focus);
+}
+
+/* Button hovers (replicate the design's style-hover behaviour) */
+.invoice-app .iv-btn-light:hover {
+  background: #f7f7f4;
+}
+.invoice-app .iv-print:hover {
+  opacity: 0.9;
+}
+.invoice-app .iv-choose:hover {
+  background: var(--field-hover);
+  color: var(--ink);
+}
+.invoice-app .iv-menu-item:hover {
+  background: #f5f5f3;
+}
+.invoice-app .iv-remove:hover {
+  background: #fbeceb;
+  color: #d04646;
+}
+.invoice-app .iv-add:hover {
+  background: var(--field-hover);
+  border-color: #bcbcb4;
+  color: var(--ink);
+}
+
+/* Editor layout — the invoice paper stays centered; the controls dock into the
+   right gutter on wide screens (filling the empty space without shifting the
+   paper), and stack above the paper on narrower screens. */
+.editor-shell {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.editor-paper,
+.editor-panel {
+  width: 100%;
+  max-width: 820px;
+}
+/* On stacked layouts the control groups flow into columns to fill the width. */
+.editor-panel-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px 22px;
+  align-items: start;
+}
+
+@media (min-width: 1480px) {
+  .editor-shell {
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 28px;
+  }
+  /* invisible left balancer === panel width, so the paper stays centered */
+  .editor-shell::before {
+    content: "";
+    flex: 0 0 280px;
+    order: 1;
+    align-self: stretch;
+  }
+  .editor-paper {
+    order: 2;
+    flex: 0 1 820px;
+    width: auto;
+  }
+  .editor-panel {
+    order: 3;
+    flex: 0 0 280px;
+    width: 280px;
+    max-width: 280px;
+    position: sticky;
+    top: 80px;
+  }
+  /* In the narrow rail the groups stack vertically. */
+  .editor-panel-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+}
+
+/* Preview mode — on-screen, hide every editing affordance (slots, hint, and the
+   in-paper Choose / add / remove controls) for a clean print-accurate view. */
+.invoice-app.preview .iv-f,
+.invoice-app.preview .iv-hf {
+  background: none;
+  box-shadow: none;
+  cursor: default;
+}
+.invoice-app.preview [data-paper] [data-print="hide"],
+.invoice-app.preview .iv-hint {
+  display: none !important;
+}
+
+@media print {
+  [data-print="hide"] {
+    display: none !important;
+  }
+  header {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+  .invoice-app {
+    background: #fff !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  [data-paper] {
+    box-shadow: none !important;
+    border: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+  .invoice-app .iv-f,
+  .invoice-app .iv-hf {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  @page {
+    margin: 14mm;
+  }
 }
