@@ -10,7 +10,7 @@ import {
   PaintBoardIcon,
   Edit02Icon,
   ViewIcon,
-  PrinterIcon,
+  Download04Icon,
   FloppyDiskIcon,
   Loading03Icon,
   Tick02Icon,
@@ -354,6 +354,9 @@ export default function InvoiceEditorPage() {
   const createInvoice = useCreateInvoice();
   const [saved, setSaved] = useState(false);
   const [saveErr, setSaveErr] = useState<string | null>(null);
+  const paperRef = useRef<HTMLDivElement>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfErr, setPdfErr] = useState<string | null>(null);
 
   // "Choose" menus use real saved companies/contacts, falling back to the
   // demo data when there's nothing yet (or when logged out).
@@ -501,6 +504,89 @@ export default function InvoiceEditorPage() {
       setTimeout(() => setSaved(false), 2500);
     } catch (e) {
       setSaveErr(e instanceof Error ? e.message : t.editor.saveError);
+    }
+  }
+
+  // --- export the live paper to a real PDF (no browser print dialog) --------
+  async function handleDownloadPdf() {
+    const node = paperRef.current;
+    if (!node || pdfBusy) return;
+    setPdfErr(null);
+    setPdfBusy(true);
+    try {
+      // client-only libs — load on demand so they never hit the server bundle
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import("html2canvas-pro"),
+        import("jspdf"),
+      ]);
+      // make sure the web fonts are ready before we rasterize
+      if (document.fonts?.ready) await document.fonts.ready;
+
+      const paperBg = getComputedStyle(node).backgroundColor || "#ffffff";
+      const canvas = await html2canvas(node, {
+        scale: 2,
+        backgroundColor: paperBg,
+        useCORS: true,
+        logging: false,
+        // render a clean, edit-affordance-free copy of the paper
+        onclone: (doc) => {
+          doc.querySelector(".invoice-app")?.classList.add("preview");
+          // html2canvas mis-renders text inside native <input>/<textarea> — it
+          // clips form-control values mid-glyph. Swap each control for a static
+          // <div> that carries the SAME author inline styles + class, so it
+          // occupies the identical grid/flex box (width:100%/168px, padding,
+          // negative margins, text-align all preserved) but renders as plain,
+          // fully-visible text the rasterizer can measure. Copy the author CSS,
+          // never getComputedStyle's resolved px — those break the responsive
+          // grid when the clone renders at a different width.
+          const liveInputs = node.querySelectorAll<
+            HTMLInputElement | HTMLTextAreaElement
+          >("input, textarea");
+          // Scope the clone query to the paper too; the full document clone
+          // contains the editor panel's inputs, which would break index-align.
+          const cloneInputs =
+            doc
+              .querySelector("[data-paper]")
+              ?.querySelectorAll<HTMLElement>("input, textarea") ?? [];
+          liveInputs.forEach((el, i) => {
+            const c = cloneInputs[i];
+            if (!c) return;
+            const div = doc.createElement("div");
+            div.className = el.className;
+            div.style.cssText = el.style.cssText;
+            div.style.whiteSpace =
+              el.tagName === "TEXTAREA" ? "pre-wrap" : "normal";
+            div.style.overflow = "visible";
+            div.style.wordBreak = "break-word";
+            div.textContent = el.value;
+            c.replaceWith(div);
+          });
+        },
+      });
+
+      const pdf = new jsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgData = canvas.toDataURL("image/png");
+
+      // Fit the whole invoice onto a single A4 page: fill the width, but if that
+      // would overflow the page height, scale down uniformly so it still fits in
+      // one page (centered horizontally). Invoices are meant to be one page.
+      let imgW = pageW;
+      let imgH = (canvas.height * imgW) / canvas.width;
+      if (imgH > pageH) {
+        imgW *= pageH / imgH;
+        imgH = pageH;
+      }
+      const x = (pageW - imgW) / 2;
+      pdf.addImage(imgData, "PNG", x, 0, imgW, imgH);
+
+      const name = (s.meta.number || "invoice").replace(/[^\w.-]+/g, "-");
+      pdf.save(`${name}.pdf`);
+    } catch (e) {
+      setPdfErr(e instanceof Error ? e.message : t.editor.pdfError);
+    } finally {
+      setPdfBusy(false);
     }
   }
 
@@ -872,7 +958,8 @@ export default function InvoiceEditorPage() {
               </button>
 
               <button
-                onClick={() => window.print()}
+                onClick={handleDownloadPdf}
+                disabled={pdfBusy}
                 className="iv-btn-light"
                 style={{
                   display: "inline-flex",
@@ -882,7 +969,8 @@ export default function InvoiceEditorPage() {
                   border: "1px solid #e2e2db",
                   background: "#fff",
                   color: "#1a1a1a",
-                  cursor: "pointer",
+                  cursor: pdfBusy ? "wait" : "pointer",
+                  opacity: pdfBusy ? 0.6 : 1,
                   borderRadius: 9,
                   padding: "9px 16px",
                   fontWeight: 500,
@@ -890,9 +978,27 @@ export default function InvoiceEditorPage() {
                   fontFamily: SG,
                 }}
               >
-                <HugeiconsIcon icon={PrinterIcon} size={15} strokeWidth={2} />{" "}
-                {t.editor.print}
+                <HugeiconsIcon
+                  icon={pdfBusy ? Loading03Icon : Download04Icon}
+                  size={15}
+                  strokeWidth={2}
+                  className={pdfBusy ? "animate-spin" : undefined}
+                />{" "}
+                {pdfBusy ? t.editor.preparingPdf : t.editor.downloadPdf}
               </button>
+              {pdfErr && (
+                <span
+                  style={{
+                    fontFamily: JM,
+                    fontSize: 10.5,
+                    lineHeight: 1.4,
+                    textAlign: "center",
+                    color: "#dc2626",
+                  }}
+                >
+                  {pdfErr}
+                </span>
+              )}
 
               {(() => {
                 const base: CSSProperties = {
@@ -962,6 +1068,7 @@ export default function InvoiceEditorPage() {
 
       {/* Paper */}
       <div
+        ref={paperRef}
         data-paper
         className="editor-paper"
         style={{

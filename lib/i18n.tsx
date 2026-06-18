@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 export type Lang = "id" | "en";
 
@@ -78,8 +73,7 @@ const id = {
     invoiceCount: (n: number) => `${n} invoice`,
     dialogEditTitle: "Edit Perusahaan",
     dialogAddTitle: "Tambah Perusahaan",
-    dialogDesc:
-      "Data ini akan otomatis mengisi bagian penerbit pada invoice.",
+    dialogDesc: "Data ini akan otomatis mengisi bagian penerbit pada invoice.",
     name: "Nama perusahaan",
     address: "Alamat",
     contact: "Kontak (email / telp)",
@@ -120,8 +114,7 @@ const id = {
     billingAddress: "Alamat tagihan",
     addBtn: "Tambah kontak",
     deleteTitle: "Hapus kontak?",
-    deleteDesc: (name: string) =>
-      `"${name}" akan dihapus dari daftar kontak.`,
+    deleteDesc: (name: string) => `"${name}" akan dihapus dari daftar kontak.`,
     companyPh: "PT Maju Bersama",
     personPh: "Rina Kusuma",
     contactPh: "rina@majubersama.co.id",
@@ -189,6 +182,9 @@ const id = {
     bold: "Tebal",
     addLineItem: "Tambah baris",
     print: "Cetak / PDF",
+    downloadPdf: "Unduh PDF",
+    preparingPdf: "Menyiapkan…",
+    pdfError: "Gagal membuat PDF.",
     save: "Simpan ke Riwayat",
     saving: "Menyimpan…",
     saved: "Tersimpan!",
@@ -222,7 +218,7 @@ const id = {
     routing: "Routing",
     swift: "SWIFT",
     transferNote: "Cantumkan nomor invoice pada transfer Anda.",
-    hint: "Klik kolom mana pun pada invoice untuk mengeditnya. Gunakan “Pilih” untuk memuat pengirim atau klien tersimpan.",
+    hint: "Klik kolom mana pun pada invoice untuk mengeditnya.",
     ph: {
       name: "Nama / studio Anda",
       street: "Alamat jalan",
@@ -435,6 +431,9 @@ const en: Dict = {
     bold: "Bold",
     addLineItem: "Add line item",
     print: "Print / PDF",
+    downloadPdf: "Download PDF",
+    preparingPdf: "Preparing…",
+    pdfError: "Failed to generate PDF.",
     save: "Save to History",
     saving: "Saving…",
     saved: "Saved!",
