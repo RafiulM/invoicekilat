@@ -120,6 +120,7 @@ interface State {
   menu: "sender" | "client" | null;
   currency: Currency;
   companyId: string | null; // issuer company FK for saving to the backend
+  logoUrl: string | null; // issuer logo image (from the selected company)
   biz: Party;
   meta: { number: string; issued: string; due: string };
   billTo: Party;
@@ -134,6 +135,7 @@ interface State {
 const INITIAL: State = {
   template: "minimal",
   companyId: null,
+  logoUrl: null,
   preview: false,
   accent: null,
   menu: null,
@@ -360,9 +362,17 @@ export default function InvoiceEditorPage() {
 
   // "Choose" menus use real saved companies/contacts, falling back to the
   // demo data when there's nothing yet (or when logged out).
-  const senderOptions: { id: string | null; party: Party }[] = companies.length
-    ? companies.map((c) => ({ id: c.id, party: companyToParty(c) }))
-    : SENDERS.map((p) => ({ id: null, party: p }));
+  const senderOptions: {
+    id: string | null;
+    party: Party;
+    logoUrl: string | null;
+  }[] = companies.length
+    ? companies.map((c) => ({
+        id: c.id,
+        party: companyToParty(c),
+        logoUrl: c.logoUrl ?? null,
+      }))
+    : SENDERS.map((p) => ({ id: null, party: p, logoUrl: null }));
   const clientOptions: { party: Party }[] = contacts.length
     ? contacts.map((c) => ({ party: contactToParty(c) }))
     : CLIENTS.map((p) => ({ party: p }));
@@ -375,7 +385,12 @@ export default function InvoiceEditorPage() {
     if (!c) return;
     didPrefill.current = true;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setS((p) => ({ ...p, companyId: c.id, biz: companyToParty(c) }));
+    setS((p) => ({
+      ...p,
+      companyId: c.id,
+      biz: companyToParty(c),
+      logoUrl: c.logoUrl ?? null,
+    }));
   }, [companies, activeCompanyId]);
 
   const acc = s.accent || "#1a1a1a";
@@ -440,10 +455,15 @@ export default function InvoiceEditorPage() {
   const toggleMenu = (which: "sender" | "client") =>
     setS((p) => ({ ...p, menu: p.menu === which ? null : which }));
   const closeMenu = () => setS((p) => ({ ...p, menu: null }));
-  const applySender = (c: Party, companyId: string | null) =>
+  const applySender = (
+    c: Party,
+    companyId: string | null,
+    logoUrl: string | null
+  ) =>
     setS((p) => ({
       ...p,
       companyId: companyId ?? p.companyId,
+      logoUrl,
       biz: {
         name: c.name,
         email: c.email,
@@ -1172,10 +1192,10 @@ export default function InvoiceEditorPage() {
                     >
                       {t.editor.savedSenders}
                     </div>
-                    {senderOptions.map(({ id, party: opt }, i) => (
+                    {senderOptions.map(({ id, party: opt, logoUrl }, i) => (
                       <button
                         key={id ?? `${opt.name}-${i}`}
-                        onClick={() => applySender(opt, id)}
+                        onClick={() => applySender(opt, id, logoUrl)}
                         className="iv-menu-item"
                         style={menuItem}
                       >
@@ -1215,12 +1235,15 @@ export default function InvoiceEditorPage() {
               style={{
                 width: 128,
                 height: 48,
-                border: "1px solid var(--logo-border, #e6e6e1)",
+                border: s.logoUrl
+                  ? "none"
+                  : "1px solid var(--logo-border, #e6e6e1)",
                 borderRadius: 6,
-                background: "var(--logo-bg)",
+                background: s.logoUrl ? "transparent" : "var(--logo-bg)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                overflow: "hidden",
                 fontWeight: 500,
                 fontSize: 10,
                 lineHeight: 1,
@@ -1230,7 +1253,23 @@ export default function InvoiceEditorPage() {
                 color: "var(--logo-ink, #b3b3ab)",
               }}
             >
-              {t.editor.yourLogo}
+              {s.logoUrl ? (
+                // crossOrigin lets html2canvas rasterize it for the PDF without
+                // tainting the canvas (needs the bucket to send CORS headers).
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={s.logoUrl}
+                  alt={s.biz.name || "Logo"}
+                  crossOrigin="anonymous"
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                    objectFit: "contain",
+                  }}
+                />
+              ) : (
+                t.editor.yourLogo
+              )}
             </div>
 
             <div
