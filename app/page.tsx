@@ -1242,7 +1242,7 @@ export default function InvoiceEditorPage() {
                 background: s.logoUrl ? "transparent" : "var(--logo-bg)",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
+                justifyContent: s.logoUrl ? "flex-start" : "center",
                 overflow: "hidden",
                 fontWeight: 500,
                 fontSize: 10,
