@@ -7,10 +7,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   FileAddIcon,
-  Invoice01Icon,
   Building02Icon,
   UserMultipleIcon,
-  Layout01Icon,
   File01Icon,
   ArrowDown01Icon,
   Tick02Icon,
@@ -26,10 +24,8 @@ import { LanguageSwitcher } from "./language-switcher";
 
 const NAV = [
   { href: "/", key: "createInvoice", icon: FileAddIcon, exact: true },
-  { href: "/invoices", key: "history", icon: Invoice01Icon, exact: true },
   { href: "/companies", key: "companies", icon: Building02Icon, exact: false },
   { href: "/contacts", key: "contacts", icon: UserMultipleIcon, exact: false },
-  { href: "/templates", key: "templates", icon: Layout01Icon, exact: false },
 ] as const;
 
 export function TopBar() {

@@ -118,6 +118,11 @@ body {
   background: #fbeceb;
   color: #d04646;
 }
+/* Delete-invoice action in the control panel (only shown for the open invoice). */
+.invoice-app .iv-delete:hover {
+  background: #fbeceb;
+  border-color: #e7bcbc;
+}
 .invoice-app .iv-add:hover {
   background: var(--field-hover);
   border-color: #bcbcb4;
@@ -135,7 +140,8 @@ body {
   gap: 18px;
 }
 .editor-paper,
-.editor-panel {
+.editor-panel,
+.editor-rail {
   width: 100%;
   max-width: 820px;
 }
@@ -154,12 +160,15 @@ body {
     align-items: flex-start;
     gap: 28px;
   }
-  /* invisible left balancer === panel width, so the paper stays centered */
-  .editor-shell::before {
-    content: "";
-    flex: 0 0 280px;
+  /* Riwayat rail fills the left gutter, mirroring the right control panel so
+     the paper stays centered between them. */
+  .editor-rail {
     order: 1;
-    align-self: stretch;
+    flex: 0 0 280px;
+    width: 280px;
+    max-width: 280px;
+    position: sticky;
+    top: 80px;
   }
   .editor-paper {
     order: 2;

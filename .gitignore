@@ -37,6 +37,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local agent / test tooling
+.claude/
+.testsprite/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

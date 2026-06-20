@@ -4,5 +4,4 @@ export const qk = {
   contacts: ["contacts"] as const,
   invoices: ["invoices"] as const,
   invoice: (id: string) => ["invoices", id] as const,
-  templates: ["templates"] as const,
 };

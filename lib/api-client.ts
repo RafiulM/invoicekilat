@@ -1,4 +1,4 @@
-import type { Company, Contact, Invoice, Template } from "./types";
+import type { Company, Contact, Invoice } from "./types";
 
 export class ApiError extends Error {
   status: number;
@@ -89,10 +89,6 @@ export const api = {
       }),
     remove: (id: string) =>
       request<{ ok: true }>(`/invoices/${id}`, { method: "DELETE" }),
-  },
-
-  templates: {
-    list: () => request<Template[]>("/templates"),
   },
 
   // Multipart upload — no JSON content-type header.
